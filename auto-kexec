@@ -1,0 +1,45 @@
+#!/bin/bash
+# Automatically Kexec into latest Linux kernel version.
+rpm --quiet -q kernel-uek
+# Returns 1 when any UEK RPM is installed, else 0 not installed.
+UEKRPM=$(tr 01 10 <<< $?)
+# Returns 1 when any UEK repo is enabled, else 0 repo disabled.
+UEKREPO=$(yum --quiet repolist enabled '*uek*' | wc -l | tr 01-9 01)
+uname -r | grep -iq uek
+# Returns 1 when running Linux kernel is UEK, else 0 if not UEK.
+UEKRUNNING=$(tr 01 10 <<< $?)
+# Regular kernel needs 2 cut fields vs. UEK kernel needs 3 cut fields.
+KERNELRPM="kernel"
+CUTFIELDS=2
+if [ $UEKRPM -eq 1 -a $UEKRUNNING -eq 1 ]; then
+  KERNELRPM="kernel-uek"
+  CUTFIELDS=3;
+fi
+RUNNINGREL=$(uname -r)
+LATESTREL=$(rpm -qv $KERNELRPM | sort -n | tail -n1 | cut -d- -f${CUTFIELDS}-)
+# Get version.numbers-only (remove .dist.arch suffix)
+RUNNINGVER=$(echo -E $RUNNINGREL | rev | cut -d. -f3- | rev)
+LATESTVER=$(echo -E $LATESTREL | rev | cut -d. -f3- | rev)
+if [ "$RUNNINGVER" != "$LATESTVER" ]; then
+  echo -e "\nRPM changelog for ${KERNELRPM}-${LATESTREL} since ${RUNNINGVER}:\n"
+  # Query RPM changelog, wait 10 seconds max to silently read each line.
+  rpm -q --changelog "${KERNELRPM}-${LATESTREL}" | while read -rs -t 10 CLL; do
+    # Look for the kernel running version in this line.
+    grep -iq "${RUNNINGVER}" <<< "$CLL"
+    FOUNDRV=$(tr 01 10 <<< $?);
+    if [ $FOUNDRV -eq 1 ]; then
+      # Stop printing when running version line is found.
+      break;
+    else
+      printf "%s\n" "$CLL";
+    fi;
+  done
+  echo -e "Executing Kexec into ${LATESTREL}.";
+  if ! command -v "systemctl" >/dev/null 2>&1; then
+    sudo -n /usr/bin/systemctl kexec;
+  elif ! command -v "kexec" >/dev/null 2>&1; then
+    sudo -n /usr/sbin/kexec /boot/vmlinuz-${LATESTREL} --initrd=/boot/initramfs-${LATESTREL}.img --reuse-cmdline;
+  else
+    echo "ERROR: Cannot find the kexec command to run.";
+  fi
+fi
