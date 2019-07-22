@@ -28,4 +28,4 @@ Example cron job, requires that the `auto-kexec` command can be found in the use
 
 * Only actively used and tested on OL and RHEL Linux RPM-based distributions so far.
 
-Other Linux distributions will require changes. [Pull Requests](/pulls/) are welcome and encouraged.
+Other Linux distributions will require changes. Pull requests are welcome and encouraged.

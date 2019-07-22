@@ -35,9 +35,13 @@ if [ "$RUNNINGVER" != "$LATESTVER" ]; then
     fi;
   done
   echo -e "Executing Kexec into ${LATESTREL}.";
-  if ! command -v "systemctl" >/dev/null 2>&1; then
+  command -v "systemctl" >/dev/null 2>&1
+  FOUNDSC=$(tr 01 10 <<< $?)
+  command -v "kexec" >/dev/null 2>&1
+  FOUNDKE=$(tr 01 10 <<< $?)
+  if [ $FOUNDSC -eq 1 ]; then
     sudo -n /usr/bin/systemctl kexec;
-  elif ! command -v "kexec" >/dev/null 2>&1; then
+  elif [ $FOUNDKE -eq 1 ]; then
     sudo -n /usr/sbin/kexec /boot/vmlinuz-${LATESTREL} --initrd=/boot/initramfs-${LATESTREL}.img --reuse-cmdline;
   else
     echo "ERROR: Cannot find the kexec command to run.";
