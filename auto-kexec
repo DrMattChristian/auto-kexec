@@ -35,15 +35,24 @@ if [ "$RUNNINGVER" != "$LATESTVER" ]; then
     fi;
   done
   echo -e "Executing Kexec into ${LATESTREL}.";
-  command -v "systemctl" >/dev/null 2>&1
-  FOUNDSC=$(tr 01 10 <<< $?)
-  command -v "kexec" >/dev/null 2>&1
-  FOUNDKE=$(tr 01 10 <<< $?)
-  if [ $FOUNDSC -eq 1 ]; then
-    sudo -n /usr/bin/systemctl kexec;
-  elif [ $FOUNDKE -eq 1 ]; then
-    sudo -n /sbin/kexec /boot/vmlinuz-${LATESTREL} --initrd=/boot/initramfs-${LATESTREL}.img --reuse-cmdline;
+  # Detect how the Linux kernel was booted.
+  if [ -d /sys/firmware/efi ]; then
+    # UEFI
+    command -v "systemctl" >/dev/null 2>&1
+    FOUNDSC=$(tr 01 10 <<< $?)
+    if [ $FOUNDSC -eq 1 ]; then
+      sudo -n /usr/bin/systemctl kexec;
+    else
+    echo "ERROR: Cannot find the systemctl command to run.";
+    fi;
   else
-    echo "ERROR: Cannot find the kexec command to run.";
-  fi
+    # BIOS
+    command -v "kexec" >/dev/null 2>&1
+    FOUNDKE=$(tr 01 10 <<< $?)
+    if [ $FOUNDKE -eq 1 ]; then
+      sudo -n /usr/sbin/kexec /boot/vmlinuz-${LATESTREL} --initrd=/boot/initramfs-${LATESTREL}.img --reuse-cmdline;
+    else
+      echo "ERROR: Cannot find the kexec command to run.";
+    fi;
+  fi;
 fi
