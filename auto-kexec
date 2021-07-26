@@ -1,5 +1,8 @@
 #!/bin/bash
 # Automatically Kexec into latest Linux kernel version.
+# Append sbin to path environment variable.
+PATH=$PATH:/usr/sbin
+export PATH
 rpm --quiet -q kernel-uek
 # Returns 1 when any UEK RPM is installed, else 0 not installed.
 UEKRPM=$(tr 01 10 <<< $?)
@@ -43,7 +46,7 @@ if [ "$RUNNINGVER" != "$LATESTVER" ]; then
     if [ $FOUNDSC -eq 1 ]; then
       sudo -n /usr/bin/systemctl kexec;
     else
-    echo "ERROR: Cannot find the systemctl command to run.";
+      echo "ERROR: Cannot find the systemctl command to run.";
     fi;
   else
     # BIOS
